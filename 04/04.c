@@ -5,6 +5,7 @@
 #include <math.h>
 
 #define MAX_LINES   5000
+#define LEN(arr) ((int) (sizeof (arr) / sizeof (arr)[0]))
 
 
 char** file_lines(char filename[], int* file_length)
@@ -33,99 +34,77 @@ char** file_lines(char filename[], int* file_length)
     return output;
 
 }
-int find_voltage_part1(char* number) {
-    int len = strlen(number);
-    int first_index = 0;
-    //printf("Beginning Number: %c, length: %i\n", number[first_index],len);
 
-    for (int i = 1;i<len-1;i++){
-        //printf("i: %d, number: %c\n",i, number[i]);
-        if (number[i] > number[first_index]){
-            first_index = i;
-            //printf("First Index: %d\n", first_index);
-        }
-    }
-    //printf("First Number: %c\n", number[first_index]);
-    int second_index = first_index+1;
-    for (int j = second_index; j < len; j++){
-        if ( number[j]> number[second_index]){
-            second_index = j;
-        }
-    }
-    //printf("Second Number: %c\n", number[second_index]);
-    char result_str[3];
-    result_str[0]=number[first_index];
-    result_str[1]=number[second_index];
-    result_str[3]='\0';
-    //printf("result: %s\n",result_str);
-    return atoi(result_str);
-}
-
-long find_voltage_part2(char* number) {
-    int len = strlen(number);
-    //printf("len: %d",len);
-    char testnumber[] = "000000000000";
-
-    //printf("Beginning Number: %c, length: %i\n", number[first_index],len);
-    int start = 0;
-    int len_testnumber = 0;
-    for (int i = 0;i<12;i++){
-        int remaining = 12 - len_testnumber;
-        int end = len - remaining;
-        int max_in_window = 0;
-        int max_in_window_index = start;
-        //printf("Remaining: %d, start: %d, end: %d\n max: %d, index: %d\n",remaining,start,end,max_in_window,max_in_window_index);
-        for (int j = start; j<=end;j++){
-            if (max_in_window < (number[j] - '0')){
-                max_in_window = (number[j]-'0');
-                max_in_window_index = j;
-            } 
-        }
-        testnumber[i] = (char) max_in_window + '0';
-        len_testnumber++;
-        start = max_in_window_index+1;
-    }
-    //printf("Testnumber: %s",testnumber);
-    char *endptr;
-    long final_voltage = strtol(testnumber,&endptr,10);
-    //printf("Final Voltage %ld\n", final_voltage);
-    //getchar();
-    return final_voltage;
-}
-void solve_adjacency(char** input, int height){
-    char** matrix = malloc(height * sizeof(char*));
+char** solve_adjacency(char** input, int height){
+    char** matrix = calloc(height , sizeof(char*));
     int width = strlen(input[0]);
     for (size_t i = 0;i<height;i++){
         matrix[i] = malloc(strlen(input[i]) + 1);
-        for (size_t j = 0; j<width; j++){
-            if (input[i][j] == '@') {
+        for (size_t j = 0; j<=width; j++){
+            if (input[i][j] == '@' || (input[i][j] >= '0' && input[i][j] <= '9')) {
                 matrix[i][j] ='0';
             } else {
                 matrix[i][j] = input[i][j];
             }
         }
+        //printf("%s\n",matrix[i]);
     }
-    for (size_t i = 0;i<height;i++){
-        for (size_t j = 0; j<width; j++){
+    //printf("height %d, width %d\n",height,width);
+    for (int i = 0;i<height;i++){
+        for (int j = 0; j<width; j++){
             if (matrix[i][j]=='.'){
                 continue;
             }
             int count = 0;
             for (int k = i -1; k<=i+1;k++){
                 if (k < 0 || k>= height){
-                        continue
+                        //printf("skipped k %d\n",k);
+                        continue;
                 }
                 for (int l = j-1;l<=j+1;l++){
                     if (l < 0 || l>= width){
-                        continue
+                        //printf("skipped l%d\n",l);
+                        continue;
                     }
-                    if matrix[k][l] != '.' {
+                    if (matrix[k][l] != '.' && (i!=k || j!=l)) {
+                        //printf("Found on %d %d\n",k,l);
                         count++;
                     }
 
                 }
             }
-            matrix[i][j]==count + '0';
+            matrix[i][j]=count + '0';
+        }
+        //printf("%s\n",matrix[i]);
+    }
+    return matrix;
+}
+long get_accessible_paperrolls(char** matrix,int num_lines){
+    long count = 0;
+    //printf("Length %d\n",num_lines);
+    for (int i=0; i<num_lines;i++){
+        //printf("%s\n",matrix[i]);
+        //printf("strlen %d\n",strlen(matrix[i]));
+        for (int j=0; j<strlen(matrix[i]);j++){
+            //printf("TEST %c\n",matrix[i][j]);
+        
+            if (matrix[i][j] != '.' &&  (matrix[i][j] -'0') <4){
+                count++;
+            }
+        }
+    }
+    return count;
+}
+void remove_paperrolls(char** matrix, int num_lines){
+    for (int i=0; i<num_lines;i++){
+        //printf("%s\n",matrix[i]);
+        //printf("strlen %d\n",strlen(matrix[i]));
+        for (int j=0; j<strlen(matrix[i]);j++){
+            //printf("TEST %c\n",matrix[i][j]);
+        
+            if (matrix[i][j] != '.' &&  (matrix[i][j] -'0') <4){
+                matrix[i][j] = '.';
+            }
         }
     }
 }
@@ -134,12 +113,24 @@ int main(void)
 {
     int num_lines = 0;
     char **output = file_lines("file.txt", &num_lines);
-    
+    printf("TEST\n");
     // Game variables
-    long result = 0;
     for (int i = 0; i < num_lines; i++) {
-        output[i][strlen(output[i])-1] = '\0';
+        printf("output: %s",output[i]);
+        printf("LEN: %d, %d\n",LEN(output[i]),strlen(output[i]));
+        if (strlen(output[i]) != 0){
+            output[i][strlen(output[i])-1] = '\0';
+        }
+        printf("output: %s\n",output[i]);
     }
-    solve_adjacency(output,num_lines);
+    long result = 0;
+    long count = 1;
+    char** matrix = solve_adjacency(output,num_lines);
+    while (count !=0){
+        count = get_accessible_paperrolls(matrix,num_lines);
+        remove_paperrolls(matrix,num_lines);
+        matrix = solve_adjacency(matrix,num_lines);
+        result = count + result;
+    }
     printf("Final Result: %ld\n", result);
 }
